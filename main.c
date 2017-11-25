@@ -1,5 +1,5 @@
 #define PROJECTION
-//#define RASTERIZATION
+#define RASTERIZATION
 //#define CLIPPING
 //#define INTERPOLATION
 //#define ZBUFFERING
@@ -122,7 +122,19 @@ void sutherlandHodgmanClip(Polygon unclipped, Polygon clipWindow, out Polygon re
 // is on the inner or outer side of the edge (ab)
 int edge(vec2 point, Vertex a, Vertex b) {
 #ifdef RASTERIZATION
-    // Put your code here
+  	//calculate half space equation involves finding y = ax+c
+    float slope =  (b.position[1]-a.position[1]) / (b.position[0]-a.position[0]);
+    
+  	//b = y/(-ax)
+  	float c = a.position[1]- (slope*a.position[0]);
+  	
+  	//Equation = ax + b - y
+  	float result = (slope*point[0] + c - point[1])*(b.position[0]-a.position[0]);
+  	
+  	if(result > 0.0){
+      return INNER_SIDE;
+    }
+  
 #endif
     return OUTER_SIDE;
 }
@@ -136,9 +148,14 @@ bool isPointInPolygon(vec2 point, Polygon polygon) {
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #ifdef RASTERIZATION
-    // Put your code here
+          	Vertex a = getWrappedPolygonVertex(polygon,i);
+            Vertex b = getWrappedPolygonVertex(polygon,i+1);
+  			int halfTest = edge(point, a, b);
+          	if(halfTest == OUTER_SIDE){
+              rasterise = false;
+            }
 #else
-            rasterise = false;
+      	 rasterise = false;
 #endif
         }
     }
@@ -275,8 +292,7 @@ vec3 projectVertexPosition(vec3 position) {
   
     // Compute the view matrix.
     mat4 viewMatrix = computeViewMatrix(VRP, TP, VUV);
- 
-
+  
   // Compute the projection matrix.
     mat4 projectionMatrix = computeProjectionMatrix();
   
