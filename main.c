@@ -65,7 +65,27 @@ void makeEmptyPolygon(out Polygon polygon) {
 
 int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 #ifdef CLIPPING
-    // Put your code here
+
+  	//calculate half space equation between wind1 and wind2 y= slope x + b
+  	//to do that we have to find the slope and the c constant
+    float slope =  (wind2.position[1]-wind1.position[1]) / (wind2.position[0]-wind1.position[0]);  
+  	float c = wind2.position[1]- (slope*wind2.position[0]);
+  	
+  	//find value for each of the coordinates given
+  	float resultPoli1 = (slope*poli1.position[0] + c - poli1.position[1])*(wind2.position[0]-wind1.position[0]);
+  	float resultPoli2 = (slope*poli2.position[0] + c - poli2.position[1])*(wind2.position[0]-wind1.position[0]);  	
+  	
+  	//For each of the different cases
+	if(resultPoli1 > 0.0 && resultPoli2 > 0.0){
+     		return INSIDE;
+    }else if(resultPoli1 < 0.0 && resultPoli2 < 0.0){
+         	return OUTSIDE;
+    } else if(resultPoli1 > 0.0 && resultPoli2 < 0.0){
+      		return LEAVING;
+    } else if(resultPoli1 < 0.0 && resultPoli2 > 0.0){
+      		return ENTERING;
+    }     
+  	
 #else
     return INSIDE;
 #endif
@@ -74,7 +94,8 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 // This function assumes that the segments are not parallel or collinear.
 Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 #ifdef CLIPPING
-    // Put your code here
+
+}
 #else
     return a;
 #endif
@@ -102,7 +123,7 @@ void sutherlandHodgmanClip(Polygon unclipped, Polygon clipWindow, out Polygon re
             // Handle the j-th vertex of the clipped polygon. This should make use of the function 
             // intersect() to be implemented above.
 #ifdef CLIPPING
-    // Put your code here
+
 #else
             appendVertexToPolygon(clipped, getWrappedPolygonVertex(oldClipped, j));
 #endif
