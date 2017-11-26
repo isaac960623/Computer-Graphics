@@ -3,7 +3,7 @@
 #define CLIPPING
 #define INTERPOLATION
 #define ZBUFFERING
-//#define ANIMATION
+#define ANIMATION
 
 precision highp float;
 uniform float time;
@@ -208,6 +208,7 @@ int edge(vec2 point, Vertex a, Vertex b) {
   	float c = a.position[1]- (slope*a.position[0]);
   	
   	//Equation = ax + b - y
+  	//take in consideration the clockwise movement
   	float result = (slope*point[0] + c - point[1])*(b.position[0]-a.position[0]);
   	
   	if(result > 0.0){
@@ -294,8 +295,7 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
          
           // find the area of triangle
           float weightOfA = triangleArea(B,C,point);
-          
-          
+                 
           
 #else
 #endif
@@ -338,7 +338,7 @@ mat4 computeProjectionMatrix() {
     //using standard perspective projection seen in https://en.wikibooks.org/wiki/GLSL_Programming/Vertex_Transformations
   	// aspect ratio a is already given and n is imageDistance.
     // d is found with angle of 0.69 radians obtained through trial and error to look like given picture
- 	float d = 1.0/tan(0.69/2.0);    
+ 	float d = 1.0/tan(0.63/2.0);    
     //assume f is infinite
     float f = 10000.0;
       
@@ -358,8 +358,7 @@ mat4 computeViewMatrix(vec3 VRP, vec3 TP, vec3 VUV) {
 
 #ifdef PROJECTION
   
- 	//This was done following the slides on creating a general camera
-     
+ 	//This was done following the slides on creating a general camera 
   	// Define VPN as vector pointing away from the camera
   	vec3 VPN = TP - VRP;
   	
@@ -382,7 +381,7 @@ mat4 computeViewMatrix(vec3 VRP, vec3 TP, vec3 VUV) {
 
 vec3 getCameraPosition() {  
 #ifdef ANIMATION
-    // Put your code here
+    return vec3(0, 10.0*sin(time),10.0*cos(time));
 #else
     return vec3(0, 0, 10);
 #endif
