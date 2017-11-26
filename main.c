@@ -1,6 +1,6 @@
 #define PROJECTION
 #define RASTERIZATION
-//#define CLIPPING
+#define CLIPPING
 //#define INTERPOLATION
 //#define ZBUFFERING
 //#define ANIMATION
@@ -78,11 +78,14 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
   	//For each of the different cases
 	if(resultPoli1 > 0.0 && resultPoli2 > 0.0){
      		return INSIDE;
-    }else if(resultPoli1 < 0.0 && resultPoli2 < 0.0){
+    }
+  	if(resultPoli1 < 0.0 && resultPoli2 < 0.0){
          	return OUTSIDE;
-    } else if(resultPoli1 > 0.0 && resultPoli2 < 0.0){
+    } 
+  	if(resultPoli1 > 0.0 && resultPoli2 < 0.0){
       		return LEAVING;
-    } else if(resultPoli1 < 0.0 && resultPoli2 > 0.0){
+    }
+  	if(resultPoli1 < 0.0 && resultPoli2 > 0.0){
       		return ENTERING;
     }     
   	
@@ -94,8 +97,38 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 // This function assumes that the segments are not parallel or collinear.
 Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 #ifdef CLIPPING
+	
+  	//we have two parametric equations intersecting
+  	// p1 = c + s*CD
+  	// p2 = a + t*AB
+  	// we have to find the values for which s = t
 
-}
+  	float AB1 = b.position[0]-a.position[0];
+  	float AB2 = b.position[1]-a.position[1];
+  	float AB3 = b.position[2]-a.position[2];
+ 	float a1 = a.position[0];
+    float a2 = a.position[1];
+  	float a3 = a.position[2];
+  	
+  	float CD1 = d.position[0]-c.position[0];
+  	float CD2 = d.position[1]-c.position[1];
+  	float CD3 = d.position[2]-c.position[2];
+    float c1 = c.position[0];
+    float c2 = c.position[1];
+  	float c3 = c.position[2];
+  
+  	float s = (AB1*(a2-c2) + AB2*(c1 - a1)) / (CD2*AB1-CD1*AB2);
+  	
+  	//now that we have s plug first parametric equation to get x y z values
+	Vertex intersection;
+	intersection.position[0] = c1 + s*CD1;
+    intersection.position[1] = c2 + s*CD2;
+  	 
+    // z adjusted for interpolation
+  	float d3 = d.position[2];
+  	intersection.position[2] = 1.0 / ((1.0/c3) + s*((1.0/d3)-(1.0/c3)));
+  	return intersection;
+  	
 #else
     return a;
 #endif
@@ -123,7 +156,32 @@ void sutherlandHodgmanClip(Polygon unclipped, Polygon clipWindow, out Polygon re
             // Handle the j-th vertex of the clipped polygon. This should make use of the function 
             // intersect() to be implemented above.
 #ifdef CLIPPING
-
+			Vertex p0 = getWrappedPolygonVertex(oldClipped , j);
+            Vertex p1 = getWrappedPolygonVertex(oldClipped , j+1);
+          	
+          	Vertex clipWindow1 = getWrappedPolygonVertex(clipWindow , i);;
+          	Vertex clipWindow2 = getWrappedPolygonVertex(clipWindow , i+1); ;
+          	
+          	if(getCrossType(p0,p1,clipWindow1, clipWindow2) == 0) {
+              //entering
+              // add intersection and p1
+              appendVertexToPolygon(clipped, intersect2D(p0, p1, clipWindow1, clipWindow2));
+              appendVertexToPolygon(clipped, p1);
+              
+            }
+          	if(getCrossType(p0,p1,clipWindow1, clipWindow2) == 1) {
+              //leaving
+              appendVertexToPolygon(clipped, intersect2D(p0, p1, clipWindow1, clipWindow2));
+            } 
+          	if(getCrossType(p0,p1,clipWindow1, clipWindow2) == 2) {
+              //outside
+              //do not do anything
+            } 
+          	if(getCrossType(p0,p1,clipWindow1, clipWindow2) == 3){
+          	  //inside
+              appendVertexToPolygon(clipped, p1);
+        	}
+          	
 #else
             appendVertexToPolygon(clipped, getWrappedPolygonVertex(oldClipped, j));
 #endif
