@@ -2,7 +2,7 @@
 #define RASTERIZATION
 #define CLIPPING
 #define INTERPOLATION
-//#define ZBUFFERING
+#define ZBUFFERING
 //#define ANIMATION
 
 precision highp float;
@@ -278,7 +278,7 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
           //we repeat this for all verteces in the polygon
       
           //A is the current point we are weighting
-          vec2 A = vec2(getWrappedPolygonVertex(polygon,i).position[0],getWrappedPolygonVertex(polygon,i).position[1]);
+          vec3 A = vec3(getWrappedPolygonVertex(polygon,i).position[0],getWrappedPolygonVertex(polygon,i).position[1],getWrappedPolygonVertex(polygon,i).position[2]);
           vec3 Acolor = getWrappedPolygonVertex(polygon,i).color;
           
           //First point in the triangle
@@ -300,7 +300,8 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
 #else
 #endif
 #ifdef ZBUFFERING
-    // Put your code here
+		depthSum += weightOfA;
+        positionSum += A*weightOfA;
 #endif
 #ifdef INTERPOLATION
    		  //add the weighted color
@@ -316,10 +317,9 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
    	result.color = colorSum / weightSum;
 #endif
 #ifdef ZBUFFERING
-    // Put your code here
+    result.position = positionSum / depthSum;
 #endif
 #if !defined(INTERPOLATION) && !defined(ZBUFFERING)
-    // Put your code here
 #endif
 
   return result;
@@ -439,6 +439,15 @@ void drawPolygon(
           interpolateVertex(point, projectedPolygon);
 #if defined(ZBUFFERING)    
     // Put your code here
+      		
+     		//if the z value of your interpolated vertex is smaller than the current depth
+      		//color the pixel with the color of this interpolated vertex
+      
+      		if(depth > interpolatedVertex.position[2]){
+              color = interpolatedVertex.color;
+              depth = interpolatedVertex.position[2];
+            }
+      
 #else
       // Put your code to handle z buffering here
       color = interpolatedVertex.color;
