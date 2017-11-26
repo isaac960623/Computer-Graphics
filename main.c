@@ -1,7 +1,7 @@
 #define PROJECTION
 #define RASTERIZATION
 #define CLIPPING
-//#define INTERPOLATION
+#define INTERPOLATION
 //#define ZBUFFERING
 //#define ANIMATION
 
@@ -271,14 +271,41 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #if defined(INTERPOLATION) || defined(ZBUFFERING)
-    // Put your code here
+    		
+          //For current vertex we will draw a triangle between 1 verteces before and after the current vertex and the point given.
+          //we then find the area of this triangle which is equal to the weight of how much the color of point A affects the point given. 
+          //We add the weighted color of A to the color of the point given
+          //we repeat this for all verteces in the polygon
+      
+          //A is the current point we are weighting
+          vec2 A = vec2(getWrappedPolygonVertex(polygon,i).position[0],getWrappedPolygonVertex(polygon,i).position[1]);
+          vec3 Acolor = getWrappedPolygonVertex(polygon,i).color;
+          
+          //First point in the triangle
+          vec2 B = vec2(getWrappedPolygonVertex(polygon,i+1).position[0],getWrappedPolygonVertex(polygon,i+1).position[1]);
+          
+          //Second point in the triangle
+          vec2 C; 
+          if(i == 0){
+            C = vec2(getWrappedPolygonVertex(polygon,polygon.vertexCount - 1).position[0],getWrappedPolygonVertex(polygon,polygon.vertexCount - 1).position[1]);
+          }else {
+          	C = vec2(getWrappedPolygonVertex(polygon,i-1).position[0],getWrappedPolygonVertex(polygon,i-1).position[1]); 
+          }
+         
+          // find the area of triangle
+          float weightOfA = triangleArea(B,C,point);
+          
+          
+          
 #else
 #endif
 #ifdef ZBUFFERING
     // Put your code here
 #endif
 #ifdef INTERPOLATION
-    // Put your code here
+   		  //add the weighted color
+          weightSum += weightOfA;
+          colorSum += Acolor*weightOfA;
 #endif
         }
     }
@@ -286,7 +313,7 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     Vertex result = polygon.vertices[0];
   
 #ifdef INTERPOLATION
-    // Put your code here
+   	result.color = colorSum / weightSum;
 #endif
 #ifdef ZBUFFERING
     // Put your code here
