@@ -1,5 +1,5 @@
 #define SOLUTION_LIGHT
-//#define SOLUTION_BOUNCE
+#define SOLUTION_BOUNCE
 //#define SOLUTION_THROUGHPUT
 //#define SOLUTION_HALTON
 //#define SOLUTION_NEXT_EVENT_ESTIMATION
@@ -36,6 +36,7 @@ const int planeCount = 4;
 const int emittingSphereCount = 2;
 #ifdef SOLUTION_BOUNCE
 // Insert correct value here
+const int maxPathLength = 3;
 #else
 const int maxPathLength = 1;
 #endif
@@ -162,6 +163,7 @@ HitInfo intersectScene(Scene scene, Ray ray, const float tMin, const float tMax)
     HitInfo best_hit_info;
     best_hit_info.t = tMax;
   	best_hit_info.hit = false;
+ 
 
     for (int i = 0; i < sphereCount; ++i) {
         Sphere sphere = scene.spheres[i];
@@ -171,7 +173,7 @@ HitInfo intersectScene(Scene scene, Ray ray, const float tMin, const float tMax)
            	hit_info.t < best_hit_info.t &&
            	hit_info.t > tMin)
         {
-            best_hit_info = hit_info;
+            best_hit_info = hit_info;     
         }
     }
 
@@ -302,6 +304,14 @@ vec3 sample3(const int dimensionIndex) {
 vec3 randomDirection(const int dimensionIndex) {
 #ifdef SOLUTION_BOUNCE
   // Put yout code to compute a random direction in 3D here
+  
+  vec2 E = sample2(PATH_SAMPLE_DIMENSION + PATH_SAMPLE_DIMENSION_MULTIPLIER * dimensionIndex);
+  
+  float angle1 = acos(2.0 * E[0] - 1.0);
+  float angle2 = E[1] * 2.0 * 3.14;
+  
+  return vec3(sin(angle1)*cos(angle2), sin(angle1)*sin(angle2) , cos(angle1) );
+  
 #else
   return vec3(0);
 #endif
@@ -413,6 +423,7 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
   vec3 result = vec3(0);
   
   Ray incomingRay = initialRay;
+  
   vec3 throughput = vec3(1.0);
   for(int i = 0; i < maxPathLength; i++) {
     HitInfo hitInfo = intersectScene(scene, incomingRay, 0.001, 10000.0); 
@@ -428,7 +439,9 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
         
     Ray outgoingRay;
 #ifdef SOLUTION_BOUNCE
-    // Put your code to compute the next ray here
+    // the next ray will start at the intersection point of the last ray and the scene and be in a random direction
+    outgoingRay.origin = hitInfo.position;
+    outgoingRay.direction = randomDirection(i);
 #endif    
 
 #ifdef SOLUTION_THROUGHPUT
@@ -443,7 +456,7 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     throughput /= probability;
     
 #ifdef SOLUTION_BOUNCE
-    // Put some handling of the next and the current ray here
+    incomingRay = outgoingRay;
 #endif    
   }  
   return result;
