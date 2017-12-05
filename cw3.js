@@ -305,7 +305,7 @@ vec3 randomDirection(const int dimensionIndex) {
 #ifdef SOLUTION_BOUNCE
   // Put yout code to compute a random direction in 3D here
   
-  vec2 E = sample2(PATH_SAMPLE_DIMENSION + PATH_SAMPLE_DIMENSION_MULTIPLIER * dimensionIndex);
+  vec2 E = sample2(dimensionIndex);
   
   float angle1 = acos(2.0 * E[0] - 1.0);
   float angle2 = E[1] * 2.0 * 3.14;
