@@ -1,7 +1,7 @@
 #define SOLUTION_LIGHT
 #define SOLUTION_BOUNCE
 #define SOLUTION_THROUGHPUT
-//#define SOLUTION_HALTON
+#define SOLUTION_HALTON
 //#define SOLUTION_NEXT_EVENT_ESTIMATION
 //#define SOLUTION_AA
 
@@ -256,8 +256,20 @@ int prime(const int index) {
 }
 
 float halton(const int sampleIndex, const int dimensionIndex) {
-#ifdef SOLUTION_HALTON  
-  // Put your implemntation of halton here.
+#ifdef SOLUTION_HALTON
+  //Inspire by the pseudocode in wikipedia
+  
+  float temp = 1.0;
+  float result = 0.0;
+  int i = sampleIndex;
+ 	
+  for( int s = 0; s < 10 ; s++){ 
+    temp = temp/float(dimensionIndex);
+	result = result + temp * float(mod(i,dimensionIndex));    
+    i = i/dimensionIndex;
+  }
+  return result;
+   
 #else
   return 0.0;
 #endif
@@ -270,7 +282,8 @@ uniform int baseSampleIndex;
 // Returns a well-distributed number in (0,1) for the dimension dimensionIndex
 float sample(const int dimensionIndex) {
 #ifdef SOLUTION_HALTON 
-  // Return your implemented halton function here
+  //as specified in the coursework I utilize the function fract on the halton + add a offset from pixel seed 
+  return fract(halton(baseSampleIndex,prime(dimensionIndex))+pixelSeed(dimensionIndex));
 #else
   // Replace the line below to use the Halton sequence for variance reduction
   return uniformRandom();
