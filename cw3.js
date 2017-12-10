@@ -1,6 +1,6 @@
 #define SOLUTION_LIGHT
 #define SOLUTION_BOUNCE
-//#define SOLUTION_THROUGHPUT
+#define SOLUTION_THROUGHPUT
 //#define SOLUTION_HALTON
 //#define SOLUTION_NEXT_EVENT_ESTIMATION
 //#define SOLUTION_AA
@@ -320,7 +320,7 @@ vec3 randomDirection(const int dimensionIndex) {
 vec3 getEmission(const Material material, const vec3 normal) {
 #ifdef SOLUTION_LIGHT  
 	// Put the correct value here.
-  	return material.emission * 20.0;
+  	return material.emission * 30.0;
 #else
   	// This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
   	return material.diffuse;
@@ -334,7 +334,14 @@ vec3 getReflectance(
   const vec3 outDirection)
 {
 #ifdef SOLUTION_THROUGHPUT    
-  	// Compute diffuse and specular contribution here
+  	// We divide the equation into 2 parts and then return the product of the 2 parts
+  	
+  	//first part of the equation
+  	vec3 part1 = material.specular * (material.glossiness + 2.0)/ (2.0 * M_PI);
+  	//second part of the equation
+  	float part2 = pow((abs(dot(outDirection, reflect(inDirection,normal)))),material.glossiness);
+  	return vec3(part1*part2);
+  
 #else
   return vec3(1.0);
 #endif 
@@ -347,7 +354,10 @@ vec3 getGeometricTerm(
   const vec3 outDirection)
 {
 #ifdef SOLUTION_THROUGHPUT  
-  // Compute the geometric term here
+  // the geometric term is the cos part of the rendering equation
+  // this is equal to the dot product of the negative direction of the incoming light and the normal
+  return vec3(dot(outDirection, normal));
+  
 #else
   return vec3(1.0);
 #endif 
@@ -446,6 +456,11 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
 
 #ifdef SOLUTION_THROUGHPUT
     // Put proper throughput computation here
+    vec3 reflec = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction,outgoingRay.direction);
+    vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction,outgoingRay.direction);
+    vec3 diffuse = hitInfo.material.diffuse;
+    throughput *= (reflec+diffuse/M_PI)*geom;
+      
 #else
     // Placeholder throughput computation
     throughput *= 0.1;    
