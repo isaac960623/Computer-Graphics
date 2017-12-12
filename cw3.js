@@ -3,7 +3,7 @@
 #define SOLUTION_THROUGHPUT
 #define SOLUTION_HALTON
 #define SOLUTION_NEXT_EVENT_ESTIMATION
-//#define SOLUTION_AA
+#define SOLUTION_AA
 
 precision highp float;
 
@@ -64,6 +64,7 @@ HitInfo getEmptyHit() {
   Material emptyMaterial;
 #ifdef SOLUTION_LIGHT  
   // Set the value of the missing property
+  emptyMaterial.emission = vec3(0.0);
 #endif  
   emptyMaterial.diffuse = vec3(0.0);
   emptyMaterial.specular = vec3(0.0);
@@ -316,7 +317,8 @@ vec3 sample3(const int dimensionIndex) {
 
 vec3 randomDirection(const int dimensionIndex) {
 #ifdef SOLUTION_BOUNCE
-  // Put yout code to compute a random direction in 3D here
+
+  //Here I followed the steps given in the coursework
   
   vec2 E = sample2(dimensionIndex);
   
@@ -332,7 +334,7 @@ vec3 randomDirection(const int dimensionIndex) {
 
 vec3 getEmission(const Material material, const vec3 normal) {
 #ifdef SOLUTION_LIGHT  
-	// Put the correct value here.
+	// i decided to put the * 30.0 here because it is not a characteristic of the scene but of our shader
   	return material.emission * 30.0;
 #else
   	// This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
@@ -457,19 +459,33 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     //draw from the currenthit point to light source
     //add emission if you dont ecounter any point on the way to the light source
     //repeat this for the 2 light source
-    
-    for(int i = 0; i < 2 ; i++){
-      
-      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[i], baseSampleIndex);
        
-      vec3 pointToLight = lightsource - hitInfo.position;
-      
-      HitInfo hitFromPointToLight = intersectScene(pointToLight, scene, 0.01, 100000.0);
-      
-      if(hitFromPointToLight.hit){
-        result += throughput * getEmission(hitInfo.material, hitInfo. normal);
+    //get the light source
+    
+    for(int i = 0; i < 2; i++) {
+      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[i], baseSampleIndex);
+
+      if(lightsource == vec3(0.0))
+        result += throughput * getEmission(hitInfo.material, hitInfo. normal);  
+      else{
+        //if the lightsource is the hitpoint don't count it       
+        //We draw a point from the light to the point 
+        //This is direct light that is coming towards our current hit point 
+        Ray  pointToLight;
+        pointToLight.direction = normalize(lightsource - hitInfo.position);
+        pointToLight.origin = hitInfo.position;
+        
+        HitInfo pointToLightHit = intersectScene(scene, pointToLight, 0.001, 10000.0);
+        
+        vec3 outGoingFromLight = reflect(pointToLight.direction,pointToLightHit.normal);
+
+        vec3 reflec = getReflectance(scene.spheres[i].material,pointToLightHit.normal,pointToLight.direction,outGoingFromLight);
+        vec3 geom = getGeometricTerm(scene.spheres[i].material,pointToLightHit.normal,pointToLight.direction,outGoingFromLight);
+        vec3 diffuse = scene.spheres[i].material.diffuse;
+        result += throughput * (reflec+diffuse)*geom/ pow(length(lightsource - hitInfo.position),2.0);      
       }
     }
+ 
     
     
 #else
@@ -531,11 +547,19 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
   
 #ifdef SOLUTION_AA  
 	// Put your anti-aliasing code here
+  vec3 avg_path = vec3(0.0);
+  	const int nb_iter = 3;
+     
+  	for(int i = 0; i < nb_iter; i++) {
+     vec2 randvec2 = vec2(uniformRandom(),uniformRandom());
+     avg_path = avg_path + samplePath(scene, getFragCoordRay(fragCoord+randvec2));
+    }
+  	return avg_path/vec3(nb_iter);
 #else
   	// No anti-aliasing
 	vec2 sampleCoord = fragCoord;
 #endif
-    return samplePath(scene, getFragCoordRay(sampleCoord));
+    //return samplePath(scene, getFragCoordRay(sampleCoord));
 }
 
 
