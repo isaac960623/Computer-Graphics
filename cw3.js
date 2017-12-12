@@ -2,7 +2,7 @@
 #define SOLUTION_BOUNCE
 #define SOLUTION_THROUGHPUT
 #define SOLUTION_HALTON
-//#define SOLUTION_NEXT_EVENT_ESTIMATION
+#define SOLUTION_NEXT_EVENT_ESTIMATION
 //#define SOLUTION_AA
 
 precision highp float;
@@ -454,7 +454,24 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     if(!hitInfo.hit) return result;
          
 #ifdef SOLUTION_NEXT_EVENT_ESTIMATION   
-    // Put the next event-estimation code here   
+    //draw from the currenthit point to light source
+    //add emission if you dont ecounter any point on the way to the light source
+    //repeat this for the 2 light source
+    
+    for(int i = 0; i < 2 ; i++){
+      
+      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[i], baseSampleIndex);
+       
+      vec3 pointToLight = lightsource - hitInfo.position;
+      
+      HitInfo hitFromPointToLight = intersectScene(pointToLight, scene, 0.01, 100000.0);
+      
+      if(hitFromPointToLight.hit){
+        result += throughput * getEmission(hitInfo.material, hitInfo. normal);
+      }
+    }
+    
+    
 #else
     // This might need to change with NEE
     result += throughput * getEmission(hitInfo.material, hitInfo. normal);  
@@ -472,7 +489,7 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     vec3 reflec = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction,outgoingRay.direction);
     vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction,outgoingRay.direction);
     vec3 diffuse = hitInfo.material.diffuse;
-    throughput *= (reflec+diffuse/M_PI)*geom;
+    throughput *= (reflec+diffuse)*geom;
       
 #else
     // Placeholder throughput computation
