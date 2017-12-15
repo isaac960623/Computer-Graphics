@@ -462,34 +462,43 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     if(!hitInfo.hit) return result;
          
 #ifdef SOLUTION_NEXT_EVENT_ESTIMATION   
+    //we check if hitpoint is a light source
+    //if it is not we do the following starting from line 469
+    //else we just add the through put if we are a lightsource
+
     //For each light source, the light source are the first two spheres in the scene object
     //we get the position on the sphere which can be reached from the current hit point we are at
     //We then draw a ray from that hitpoint to the light
     //We check that this ray does not intersect anything between the hitpoint and the sphere
-    //if it does : we do not add the light
-    //if it doesnot: we add the light 
-     
-       
-    for(int y = 0; y < 2; y++) {
+    //if it doesnot: we add the light calculating brdf and using inverse square law
+    
+    
+    if (getEmission(hitInfo.material, hitInfo.normal) == vec3(0.0)){
       
-      if(hitInfo.material == scene.spheres[y].material && i == 3 ){
-          result += throughput * vec3(0.0);
-        }
-      
-      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[y], baseSampleIndex); 
+      for (int y = 0; y < 2; y++){
+        
+        vec3 lightSource = getEmitterPosition(hitInfo.position, scene.spheres[y], PATH_SAMPLE_DIMENSION_MULTIPLIER * i + 2 );       
         Ray  pointToLight;
-        pointToLight.direction = normalize(lightsource - hitInfo.position);
+        pointToLight.direction = lightSource - hitInfo.position;
         pointToLight.origin = hitInfo.position;
         
         HitInfo pointToLightHit = intersectScene(scene, pointToLight, 0.001, 10000.0);
-          
-		//we test to see if we hit anything in between the hitpoint and the lightsource
-    	//Using http://www.cs.uu.nl/docs/vakken/magr/2015-2016/slides/lecture%2008%20-%20variance%20reduction.pdf slide 20
-      if(pointToLightHit.material == scene.spheres[y].material){
-        	result += throughput * 0.5 * getEmission(pointToLightHit.material, pointToLightHit. normal)/ pow(length(lightsource - hitInfo.position),2.0);
-     	 } 
+
+        if (pointToLightHit.hit && pointToLightHit.material.emission != vec3(0.0)){
+
+          vec3 reflectance = getReflectance(hitInfo.material, hitInfo.normal, incomingRay.direction, normalize(pointToLight.direction));
+          vec3 geomTerm = getGeometricTerm(hitInfo.material, hitInfo.normal, incomingRay.direction, normalize( pointToLight.direction));
+   
+          result += throughput * getEmission(scene.spheres[y].material, vec3(0.0)) * reflectance * geomTerm * (1.0 / pow(length(pointToLight.direction), 2.0));
+        }
+      }
+    } else {
+        // if it does not intersect a light
+        result += throughput * getEmission(hitInfo.material, hitInfo.normal);
     }
-  
+     
+       
+    
 #else
     // This might need to change with NEE
     result += throughput * getEmission(hitInfo.material, hitInfo. normal);  
