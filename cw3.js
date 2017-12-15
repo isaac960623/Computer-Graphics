@@ -334,7 +334,7 @@ vec3 randomDirection(const int dimensionIndex) {
 
 vec3 getEmission(const Material material, const vec3 normal) {
 #ifdef SOLUTION_LIGHT  
-	// i decided to put the * 30.0 here because it is not a characteristic of the scene but of our shader
+	// i decided to put the * 30.0 here because it is not a characteristic of the scene but of our path tracer
   	return material.emission * 30.0;
 #else
   	// This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
@@ -442,6 +442,12 @@ vec3 getEmitterPosition(const vec3 position, const Sphere sphere, const int dime
   return intersectSphere(emitterRay, sphere, 0.01, 100000.0).position;
 }
 
+//----------------------------------------------------
+//
+//NEE event estimation does not work
+//It would be nice to see a solution to that 
+//------------------------------------------------------
+
 vec3 samplePath(const Scene scene, const Ray initialRay) {
   
   // Initial result is black
@@ -456,38 +462,34 @@ vec3 samplePath(const Scene scene, const Ray initialRay) {
     if(!hitInfo.hit) return result;
          
 #ifdef SOLUTION_NEXT_EVENT_ESTIMATION   
-    //draw from the currenthit point to light source
-    //add emission if you dont ecounter any point on the way to the light source
-    //repeat this for the 2 light source
+    //For each light source, the light source are the first two spheres in the scene object
+    //we get the position on the sphere which can be reached from the current hit point we are at
+    //We then draw a ray from that hitpoint to the light
+    //We check that this ray does not intersect anything between the hitpoint and the sphere
+    //if it does : we do not add the light
+    //if it doesnot: we add the light 
+     
        
-    //get the light source
-    
-    for(int i = 0; i < 2; i++) {
-      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[i], baseSampleIndex);
-
-      if(lightsource == vec3(0.0))
-        result += throughput * getEmission(hitInfo.material, hitInfo. normal);  
-      else{
-        //if the lightsource is the hitpoint don't count it       
-        //We draw a point from the light to the point 
-        //This is direct light that is coming towards our current hit point 
+    for(int y = 0; y < 2; y++) {
+      
+      if(hitInfo.material == scene.spheres[y].material && i == 3 ){
+          result += throughput * vec3(0.0);
+        }
+      
+      vec3 lightsource = getEmitterPosition(hitInfo.position, scene.spheres[y], baseSampleIndex); 
         Ray  pointToLight;
         pointToLight.direction = normalize(lightsource - hitInfo.position);
         pointToLight.origin = hitInfo.position;
         
         HitInfo pointToLightHit = intersectScene(scene, pointToLight, 0.001, 10000.0);
-        
-        vec3 outGoingFromLight = reflect(pointToLight.direction,pointToLightHit.normal);
-
-        vec3 reflec = getReflectance(scene.spheres[i].material,pointToLightHit.normal,pointToLight.direction,outGoingFromLight);
-        vec3 geom = getGeometricTerm(scene.spheres[i].material,pointToLightHit.normal,pointToLight.direction,outGoingFromLight);
-        vec3 diffuse = scene.spheres[i].material.diffuse;
-        result += throughput * (reflec+diffuse)*geom/ pow(length(lightsource - hitInfo.position),2.0);      
-      }
+          
+		//we test to see if we hit anything in between the hitpoint and the lightsource
+    	//Using http://www.cs.uu.nl/docs/vakken/magr/2015-2016/slides/lecture%2008%20-%20variance%20reduction.pdf slide 20
+      if(pointToLightHit.material == scene.spheres[y].material){
+        	result += throughput * 0.5 * getEmission(pointToLightHit.material, pointToLightHit. normal)/ pow(length(lightsource - hitInfo.position),2.0);
+     	 } 
     }
- 
-    
-    
+  
 #else
     // This might need to change with NEE
     result += throughput * getEmission(hitInfo.material, hitInfo. normal);  
@@ -546,15 +548,18 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
   	initRandomSequence(); 
   
 #ifdef SOLUTION_AA  
-	// Put your anti-aliasing code here
-  vec3 avg_path = vec3(0.0);
-  	const int nb_iter = 3;
+	// I decided to do an average path between 4 paths using noisy farcoord values
+	// I will simply caculate the sample path 4 times and then average that result.
+  	const int numberOfPaths = 4;
+  
+  	vec3 result = vec3(0.0);
+  	vec2 randomchangeFactor = vec2(0.0);
      
-  	for(int i = 0; i < nb_iter; i++) {
-     vec2 randvec2 = vec2(uniformRandom(),uniformRandom());
-     avg_path = avg_path + samplePath(scene, getFragCoordRay(fragCoord+randvec2));
+  	for(int i = 0; i < numberOfPaths; i++) {
+      randomchangeFactor = vec2(uniformRandom(),uniformRandom());
+      result = result + samplePath(scene, getFragCoordRay(fragCoord+randomchangeFactor));
     }
-  	return avg_path/vec3(nb_iter);
+  	return result/vec3(numberOfPaths);
 #else
   	// No anti-aliasing
 	vec2 sampleCoord = fragCoord;
